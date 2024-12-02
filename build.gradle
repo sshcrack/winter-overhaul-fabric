@@ -24,6 +24,16 @@ repositories {
             includeGroup("software.bernie.geckolib")
         }
     }
+
+    maven {
+        name = 'ParchmentMC'
+        url = 'https://maven.parchmentmc.org'
+    }
+
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+    }
 }
 
 loom {
@@ -39,16 +49,28 @@ loom {
 }
 
 dependencies {
-    mappings loom.officialMojangMappings()
-
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+    mappings loom.layered() {
+        officialMojangMappings()
+        parchment("org.parchmentmc.data:parchment-${project.parchment_version}@zip")
+    }
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     // Fabric API. This is technically optional, but you probably want it anyway.
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     modImplementation "software.bernie.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}"
 
+
+
+
+    modImplementation "maven.modrinth:serene-seasons:${project.serene_seasons_version}"
+    modRuntimeOnly "maven.modrinth:glitchcore:${project.glitchcore_version}"
+    // From glitchcore
+    implementation("net.jodah:typetools:0.6.3")
+    implementation("com.electronwill.night-config:toml:${nightconfig_version}")
+    implementation("com.electronwill.night-config:core:${nightconfig_version}")
 }
 
 processResources {

@@ -1,25 +1,33 @@
 package me.sshcrack.winteroverhaul.entity;
 
-public class ReplacedSnowGolem implements IAnimatable {
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.*;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-    private final AnimationFactory factory = new AnimationFactory(this);
+public class ReplacedSnowGolem implements GeoEntity {
+    protected static final RawAnimation WALK_ANIM = RawAnimation.begin().thenLoop("animation.snow_golem.walk");
+    protected static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("animation.snow_golem.idle");
 
-    private static  <P extends IAnimatable> PlayState predicate(AnimationEvent<P> event) {
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
+
+    private static <P extends ReplacedSnowGolem> PlayState predicate(final AnimationState<P> event) {
         if (event.isMoving()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.snow_golem.walk", true));
+            event.getController().setAnimation(WALK_ANIM);
         } else {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.snow_golem.idle", true));
+            event.getController().setAnimation(IDLE_ANIM);
         }
+
         return PlayState.CONTINUE;
     }
 
     @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 20, ReplacedSnowGolem::predicate));
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
+        controllerRegistrar.add(new AnimationController<>(this, "controller", 20, ReplacedSnowGolem::predicate));
     }
 
     @Override
-    public AnimationFactory getFactory() {
-        return factory;
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.geoCache;
     }
 }

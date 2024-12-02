@@ -12,12 +12,12 @@
 			},
 			"bones": [
 				{
-					"name": "head",
+					"name": "armorHead",
 					"pivot": [0, 24, 0]
 				},
 				{
 					"name": "scarf",
-					"parent": "head",
+					"parent": "armorHead",
 					"pivot": [0, 26, 0],
 					"cubes": [
 						{"origin": [-5, 23, -5], "size": [10, 3, 10], "uv": [46, 18]},
@@ -29,7 +29,7 @@
 				},
 				{
 					"name": "top_hat",
-					"parent": "head",
+					"parent": "armorHead",
 					"pivot": [0, 22, 0],
 					"cubes": [
 						{"origin": [-4, 33, -4], "size": [8, 8, 8], "uv": [30, 51]},
@@ -38,7 +38,7 @@
 				},
 				{
 					"name": "winter_hat",
-					"parent": "head",
+					"parent": "armorHead",
 					"pivot": [0, 19, 0],
 					"cubes": [
 						{"origin": [-5, 29, -5], "size": [10, 4, 10], "uv": [42, 0]},

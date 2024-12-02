@@ -1,17 +1,18 @@
 package me.sshcrack.winteroverhaul.entity;
 
+import me.sshcrack.winteroverhaul.registry.ModEntities;
+import me.sshcrack.winteroverhaul.registry.ModSounds;
 import net.minecraft.core.BlockPos;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.Flutterer;
-import net.minecraft.entity.ai.control.FlightMoveControl;
-import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraft.world.World;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
@@ -25,24 +26,22 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib3.core.AnimationState;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.builder.AnimationBuilder;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import tech.thatgravyboat.winteroverhaul.common.registry.ModEntities;
-import tech.thatgravyboat.winteroverhaul.common.registry.ModSounds;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animation.*;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class Robin extends AnimalEntity implements Flutterer {
+public class Robin extends Animal implements FlyingAnimal, GeoEntity {
+    protected static final RawAnimation FLY_ANIM = RawAnimation.begin().thenLoop("animation.robin.fly");
+    protected static final RawAnimation IDLE1_ANIM = RawAnimation.begin().thenPlay("animation.robin.idle1");
+    protected static final RawAnimation IDLE2_ANIM = RawAnimation.begin().thenPlay("animation.robin.idle2");
+    protected static final RawAnimation IDLE3_ANIM = RawAnimation.begin().thenPlay("animation.robin.idle3");
 
-    private final AnimationFactory factory = new AnimationFactory(this);
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public float flap;
     public float flapSpeed;
@@ -51,11 +50,11 @@ public class Robin extends AnimalEntity implements Flutterer {
     private float flapping = 1.0F;
     private float nextFlap = 1.0F;
 
-    public Robin(EntityType<? extends AnimalEntity> entity, World world) {
-        super(entity, world);
-        this.moveControl = new FlightMoveControl(this, 10, false);
-        this.setPathfindingPenalty(BlockPathTypes.DANGER_FIRE, -1.0F);
-        this.setPathfindingPenalty(BlockPathTypes.DAMAGE_FIRE, -1.0F);
+    public Robin(EntityType<? extends Animal> entity, Level level) {
+        super(entity, level);
+        this.moveControl = new FlyingMoveControl(this, 10, false);
+        this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
+        this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -90,15 +89,15 @@ public class Robin extends AnimalEntity implements Flutterer {
     private void calculateFlapping() {
         this.oFlap = this.flap;
         this.oFlapSpeed = this.flapSpeed;
-        this.flapSpeed = (float) ((double) this.flapSpeed + (double) (!this.onGround && !this.isPassenger() ? 4 : -1) * 0.3D);
+        this.flapSpeed = (float) ((double) this.flapSpeed + (double) (!this.onGround() && !this.isPassenger() ? 4 : -1) * 0.3D);
         this.flapSpeed = Mth.clamp(this.flapSpeed, 0.0F, 1.0F);
-        if (!this.onGround && this.flapping < 1.0F) {
+        if (!this.onGround() && this.flapping < 1.0F) {
             this.flapping = 1.0F;
         }
 
         this.flapping = (float) ((double) this.flapping * 0.9D);
         Vec3 vec3 = this.getDeltaMovement();
-        if (!this.onGround && vec3.y < 0.0D) {
+        if (!this.onGround() && vec3.y < 0.0D) {
             this.setDeltaMovement(vec3.multiply(1.0D, 0.6D, 1.0D));
         }
 
@@ -128,14 +127,14 @@ public class Robin extends AnimalEntity implements Flutterer {
 
     @Override
     public boolean doHurtTarget(Entity pEntity) {
-        return pEntity.hurt(DamageSource.mobAttack(this), 3.0F);
+        return pEntity.hurt(this.damageSources().mobAttack(this), 3.0F);
     }
 
     //region Sounds
     @Nullable
     @Override
     public SoundEvent getAmbientSound() {
-        return ModSounds.ROBIN_AMBIENT.get();
+        return ModSounds.ROBIN_AMBIENT;
     }
 
     @Override
@@ -160,24 +159,25 @@ public class Robin extends AnimalEntity implements Flutterer {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob mob) {
-        return ModEntities.ROBIN.get().create(level);
+        return ModEntities.ROBIN.create(level);
     }
 
     //endregion
 
     @Override
     public boolean isFlying() {
-        return !this.onGround;
+        return !this.onGround();
     }
 
     //region Animation
 
-    private <E extends IAnimatable> PlayState idle(AnimationEvent<E> event) {
-        boolean isRunning = !event.getController().getAnimationState().equals(AnimationState.Stopped);
+    private <E extends GeoEntity> PlayState idle(AnimationState<E> event) {
+        boolean isRunning = !event.getController().getAnimationState().equals(AnimationController.State.STOPPED);
         if (isFlying()) {
-            event.getController().markNeedsReload();
+            event.getController().forceAnimationReset();
             return PlayState.STOP;
         }
+
         if (isRunning) return PlayState.CONTINUE;
         boolean threeCheck = tickCount % 60 == 0 && random.nextBoolean();
         boolean fourCheck = tickCount % 80 == 0 && random.nextBoolean();
@@ -185,41 +185,43 @@ public class Robin extends AnimalEntity implements Flutterer {
         if (threeCheck || fourCheck || fiveCheck) {
             switch (random.nextInt(3)) {
                 case 0 -> {
-                    event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.robin.idle1", false));
+                    event.getController().setAnimation(IDLE1_ANIM);
                     return PlayState.CONTINUE;
                 }
                 case 1 -> {
-                    event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.robin.idle2", false));
+                    event.getController().setAnimation(IDLE2_ANIM);
                     return PlayState.CONTINUE;
                 }
                 default -> {
-                    event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.robin.idle3", false));
+                    event.getController().setAnimation(IDLE3_ANIM);
                     return PlayState.CONTINUE;
                 }
             }
         }
-        event.getController().markNeedsReload();
+
+        event.getController().forceAnimationReset();
         return PlayState.STOP;
     }
 
-    private <E extends IAnimatable> PlayState flying(AnimationEvent<E> event) {
+    private <E extends GeoEntity> PlayState flying(AnimationState<E> event) {
         if (isFlying()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.robin.fly", true));
+            event.getController().setAnimation(FLY_ANIM);
             return PlayState.CONTINUE;
         }
-        event.getController().markNeedsReload();
+
+        event.getController().forceAnimationReset();
         return PlayState.STOP;
     }
 
     @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "flight_controller", 0, this::flying));
-        data.addAnimationController(new AnimationController<>(this, "idle_controller", 5, this::idle));
+    public void registerControllers(AnimatableManager.ControllerRegistrar data) {
+        data.add(new AnimationController<>(this, "flight_controller", 0, this::flying));
+        data.add(new AnimationController<>(this, "idle_controller", 5, this::idle));
     }
 
     @Override
-    public AnimationFactory getFactory() {
-        return factory;
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
     }
 
     //endregion

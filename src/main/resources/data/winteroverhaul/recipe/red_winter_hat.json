@@ -10,6 +10,7 @@
     }
   },
   "result": {
-    "item": "winteroverhaul:red_winter_hat"
+    "id": "winteroverhaul:red_winter_hat",
+    "count": 1
   }
 }

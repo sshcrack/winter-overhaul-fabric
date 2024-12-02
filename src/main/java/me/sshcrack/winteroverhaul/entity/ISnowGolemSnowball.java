@@ -1,6 +1,6 @@
 package me.sshcrack.winteroverhaul.entity;
 
-import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.world.effect.MobEffectInstance;
 
 public interface ISnowGolemSnowball {
 
@@ -12,5 +12,5 @@ public interface ISnowGolemSnowball {
 
     boolean winteroverhaul_isGolemSnowball();
 
-    void winteroverhaul_addMobEffect(StatusEffectInstance effect);
+    void winteroverhaul_addMobEffect(MobEffectInstance effect);
 }
